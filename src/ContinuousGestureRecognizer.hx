@@ -147,19 +147,10 @@ class ContinuousGestureRecognizer
 	private var samplePointDistance:Int;
 	private var patterns:List<Pattern>;
 	
-	private static function listGet<T>(list:List<T>, n:Int):T {
-		var it = list.iterator();
-		while (n-- > 0) {
-			if (!it.hasNext()) throw n + " is too large.";
-			it.next();
-		}		
-		return it.hasNext() ? it.next() : throw n + " is too large."; 
-	}
-	
 	private function getResults(incrementalResults:List<IncrementalResult>):Array<Result> {
 		var results:Array<Result> = new Array<Result>();
 		for (ir in incrementalResults) {
-			results.push(new Result(ir.pattern.template, ir.prob, listGet(ir.pattern.segments, ir.indexOfMostLikelySegment)));
+			results.push(new Result(ir.pattern.template, ir.prob, ir.mostLikelySegment));
 		}
 		return results;
 	}
@@ -193,7 +184,7 @@ class ContinuousGestureRecognizer
 	private static function getIncrementalResult(unkPts:List<Pt>, pattern:Pattern, beta:Float, lambda:Float, e_sigma:Float):IncrementalResult {
 		var segments:List<List<Pt>> = pattern.segments;
 		var maxProb:Float = 0.0;
-		var maxIndex:Int = -1;
+		var maxSeg:List<Pt> = null;
 		var i = 0;
 		for (pts in segments) {
 			var samplingPtCount:Int = pts.length;
@@ -201,19 +192,24 @@ class ContinuousGestureRecognizer
 			var prob:Float = getLikelihoodOfMatch(unkResampledPts, pts, e_sigma, e_sigma/beta, lambda);
 			if (prob > maxProb) {
 				maxProb = prob;
-				maxIndex = i;
+				maxSeg = pts;
 			}
 			
 			++i;
 		}
-		return new IncrementalResult(pattern, maxProb, maxIndex);
+		return new IncrementalResult(pattern, maxProb, maxSeg);
 	}
 	
-	public static function deepCopyPts(pts:List<Pt>):List<Pt> {
+	public static function deepCopyPts(pts:Iterable<Pt>, len:Int = -1):List<Pt> {
 		var newPts:List<Pt> = new List<Pt>();
-		for (pt in pts) {
-			newPts.add(new Pt(pt.x, pt.y));
-		}
+		
+		if (len == -1)
+			for (pt in pts)
+				newPts.add(new Pt(pt.x, pt.y));
+		else
+			for (pt in pts)
+				if (len-- > 0) newPts.add(new Pt(pt.x, pt.y));
+		
 		return newPts;
 	}
 	
@@ -241,26 +237,26 @@ class ContinuousGestureRecognizer
 	
 	private static function scale(pts:List<Pt>, sx:Float, sy:Float):Void {
 		for (pt in pts) {
-			pt.x*= Std.int(sx);
-			pt.y*= Std.int(sy);
+			pt.x *= sx;
+			pt.y *= sy;
 		}
 	}
 	
 	private static function translate(pts:List<Pt>, dx:Float, dy:Float):Void {
 		for (pt in pts) {
-			pt.x+= Math.floor(dx);
-			pt.y+= Math.floor(dy);
+			pt.x += dx;
+			pt.y += dy;
 		}
 	}
 	
 	private static function getBoundingBox(pts:List<Pt>):Rect {
-		var minX:Int = 214783647;
-		var minY:Int = 214783647;
-		var maxX:Int = -214783648;
-		var maxY:Int = -214783648;
+		var minX = Math.POSITIVE_INFINITY;
+		var minY = Math.POSITIVE_INFINITY;
+		var maxX = Math.NEGATIVE_INFINITY;
+		var maxY = Math.NEGATIVE_INFINITY;
 		for (pt in pts) {
-			var x:Int = pt.x;
-			var y:Int = pt.y;
+			var x = pt.x;
+			var y = pt.y;
 			if (x < minX) {
 				minX = x;
 			}
@@ -288,22 +284,12 @@ class ContinuousGestureRecognizer
 		return new Centroid(xIntegral / totalMass, yIntegral / totalMass);
 	}
 	
-	private static function subList<T>(list:List<T>, len:Int):List<T> {
-		var l = new List<T>();
-		len = cast Math.min(list.length, len);
-		for (i in list) {
-			if (--len < 0) break; 
-			l.add(i);
-		}
-		return l;
-	}
-	
 	private static function generateEquiDistantProgressiveSubSequences(pts:List<Pt>, ptSpacing:Int):List<List<Pt>> {
 		var sequences:List<List<Pt>> = new List<List<Pt>>();
 		var nSamplePoints:Int = getResamplingPointCount(pts, ptSpacing);
 		var resampledPts:List<Pt> = resamplePoints(pts, nSamplePoints);
 		for (i in 1...resampledPts.length) {
-			var seq:List<Pt> = deepCopyPts(subList(resampledPts, i+1));
+			var seq:List<Pt> = deepCopyPts(resampledPts, i+1);
 			sequences.add(seq);
 		}
 		return sequences;
@@ -328,18 +314,18 @@ class ContinuousGestureRecognizer
 		return len;
 	}
 	
-	private static function distancePoints(p1:Pt, p2:Pt):Float {
-		return distanceCoor(Std.int(p1.x), Std.int(p1.y), Std.int(p2.x), Std.int(p2.y));
+	inline private static function distancePoints(p1:Pt, p2:Pt):Float {
+		return distanceCoor(p1.x, p1.y, p2.x, p2.y);
 	}
 
-	private static function distanceCoor(x1:Int, y1:Int, x2:Int, y2:Int):Int {
+	private static function distanceCoor(x1:Float, y1:Float, x2:Float, y2:Float):Float {
 		if ((x2 -= x1) < 0) {
 			x2 = -x2;
 		}
 		if ((y2 -= y1) < 0) {
 			y2 = -y2;
 		}
-		return (x2 + y2 - (((x2 > y2) ? y2 : x2) >> 1) );
+		return (x2 + y2 - (((x2 > y2) ? y2 : x2) * 0.5) );//(x2 + y2 - (((x2 > y2) ? y2 : x2) >> 1) );
 	}
 	
 	private static function getLikelihoodOfMatch(pts1:List<Pt>, pts2:List<Pt>, eSigma:Float, aSigma:Float, lambda:Float):Float {
@@ -421,21 +407,21 @@ class ContinuousGestureRecognizer
 	
 	private static function resamplePoints(points:List<Pt>, numTargetPoints:Int):List<Pt> {
 		var r:List<Pt> = new List<Pt>();
-		var inArray:Array<Int> = toArray(points);
-		var outArray:Array<Int> = []; //TODO new int[numTargetPoints * 2];
+		var inArray:Array<Float> = toArray(points);
+		var outArray:Array<Float> = []; //TODO new int[numTargetPoints * 2];
 		
-		resampleTemplate(inArray, outArray, points.length, numTargetPoints);
+		resample(inArray, outArray, points.length, numTargetPoints);
 		var	i = 0,
 			n = outArray.length;
 		while (i < n) {
-			r.add(new Pt(outArray[i], outArray[i + 1], false));
+			r.add(new Pt(outArray[i], outArray[i + 1]));
 			i += 2;
 		}
 		return r;
 	}
 
-	private static function toArray(points:List<Pt>):Array<Int> {
-		var out:Array<Int> = [];
+	private static function toArray(points:List<Pt>):Array<Float> {
+		var out:Array<Float> = [];
 			
 		for (pt in points) {
 			out.push(pt.x);
@@ -445,12 +431,12 @@ class ContinuousGestureRecognizer
 		return out;
 	}
 	
-	private static function resampleTemplate(template:Array<Int>, buffer:Array<Int>, n:Int, numTargetPoints:Int):Void {
-		var segment_buf:Array<Int> = []; //TODO new int[MAX_RESAMPLING_PTS];
+	private static function resample(template:Array<Float>, buffer:Array<Float>, n:Int, numTargetPoints:Int):Void {
+		var segment_buf:Array<Float> = []; //TODO new int[MAX_RESAMPLING_PTS];
 
 		var l:Float, segmentLen:Float, horizRest:Float, verticRest:Float, dx:Float, dy:Float;
-		var x1:Int, y1:Int, x2:Int, y2:Int;
-		var i:Int, m:Int, a:Int, segmentPoints:Int, j:Int, maxOutputs:Int, end:Int;
+		var x1:Float, y1:Float, x2:Float, y2:Float;
+		var i:Int, m:Int, a:Int, segmentPoints:Float, j:Int, maxOutputs:Int, end:Int;
 
 		m = n * 2;
 		l = getSpatialLengthN(template, n);
@@ -482,8 +468,8 @@ class ContinuousGestureRecognizer
 				while (j < segmentPoints) {
 					if (j == 0) {
 						if (a < maxOutputs) {
-							buffer[a] = Std.int(x1 + horizRest);
-							buffer[a + 1] = Std.int(y1 + verticRest);
+							buffer[a] = x1 + horizRest;
+							buffer[a + 1] = y1 + verticRest;
 							horizRest = 0.0;
 							verticRest = 0.0;
 							a += 2;
@@ -491,8 +477,8 @@ class ContinuousGestureRecognizer
 					}
 					else {
 						if (a < maxOutputs) {
-							buffer[a] = Std.int(x1 + j * dx);
-							buffer[a + 1] = Std.int(y1 + j * dy);
+							buffer[a] = x1 + j * dx;
+							buffer[a + 1] = y1 + j * dy;
 							a += 2;
 						}
 					}
@@ -509,8 +495,8 @@ class ContinuousGestureRecognizer
 		if (a < end) {
 			i = a;
 			while (i < end) {
-				buffer[i] = Std.int((buffer[i - 2] + template[m - 2]) / 2);
-				buffer[i + 1] = Std.int((buffer[i - 1] + template[m - 1]) / 2);
+				buffer[i] = (buffer[i - 2] + template[m - 2]) / 2;
+				buffer[i + 1] = (buffer[i - 1] + template[m - 1]) / 2;
 				i += 2;
 			}
 		}
@@ -518,9 +504,9 @@ class ContinuousGestureRecognizer
 		buffer[maxOutputs - 1] = template[m - 1];
 	}
 	
-	private static function getSegmentPoints(pts:Array<Int>, n:Int, length:Float, buffer:Array<Int>):Float {
+	private static function getSegmentPoints(pts:Array<Float>, n:Int, length:Float, buffer:Array<Float>):Float {
 		var i:Int, m:Int;
-		var x1:Int, y1:Int, x2:Int, y2:Int, ps:Int;
+		var x1:Float, y1:Float, x2:Float, y2:Float, ps:Float;
 		var rest:Float, currentLen:Float;
 
 		m = n * 2;
@@ -534,7 +520,7 @@ class ContinuousGestureRecognizer
 			currentLen = distanceCoor(x1, y1, x2, y2);
 			currentLen += rest;
 			rest = 0.0;
-			ps = Std.int((currentLen / length));
+			ps = currentLen / length;
 			if (ps == 0) {
 				rest += currentLen;
 			}
@@ -544,7 +530,7 @@ class ContinuousGestureRecognizer
 			if (i == 2 && ps == 0) {
 				ps = 1;
 			}
-			buffer[Std.int((i / 2) - 1)] = Std.int(ps);
+			buffer[Std.int((i / 2) - 1)] = ps;
 			x1 = x2;
 			y1 = y2;
 			
@@ -553,10 +539,10 @@ class ContinuousGestureRecognizer
 		return rest;
 	}
 
-	private static function getSpatialLengthN(pat:Array<Int>, n:Int):Int {
-		var l:Int;
+	private static function getSpatialLengthN(pat:Array<Float>, n:Int):Float {
+		var l:Float;
 		var i:Int, m:Int;
-		var x1:Int, y1:Int, x2:Int, y2:Int;
+		var x1:Float, y1:Float, x2:Float, y2:Float;
 
 		l = 0;
 		m = 2 * n;
@@ -567,7 +553,7 @@ class ContinuousGestureRecognizer
 			while (i < m) {
 				x2 = pat[i];
 				y2 = pat[i + 1];
-				l += Std.int(distanceCoor(x1, y1, x2, y2));
+				l += distanceCoor(x1, y1, x2, y2);
 				x1 = x2;
 				y1 = y2;
 				
@@ -593,12 +579,12 @@ class Template {
 	/**
 	 * The identifier for this template gesture / stroke.
 	 */
-	public var id:String;
+	public var id(default, null):String;
 	/**
 	 * A sequence of points that defines this template
 	 * gesture / stroke.
 	 */
-	public var pts:List<Pt>;
+	public var pts(default, null):List<Pt>;
 	
 	/**
 	 * Creates a template gesture / stroke.
@@ -607,9 +593,9 @@ class Template {
 	 * @param points the sequence of points that define this
 	 * template gesture / stroke
 	 */
-	public function new(id:String, points:List<Pt>):Void {
+	public function new(id:String, points:Iterable<Pt>):Void {
 		this.id = id;
-		this.pts = points;
+		this.pts = ContinuousGestureRecognizer.deepCopyPts(points);
 	}
 
 }
@@ -625,11 +611,11 @@ class Pt {
 	/**
 	 * The horizontal component of this point.
 	 */
-	public var x:Int;
+	public var x:Float;
 	/**
 	 * The vertical component of this point.
 	 */
-	public var y:Int;
+	public var y:Float;
 	
 	/**
 	 * Creates a point.
@@ -637,7 +623,7 @@ class Pt {
 	 * @param x the horizontal component of this point
 	 * @param y the vertical component of this point
 	 */
-	public function new(x:Int, y:Int, waypoint:Bool = false):Void {
+	public function new(x:Float, y:Float):Void {
 		this.x = x;
 		this.y = y;
 	}
@@ -654,15 +640,15 @@ class Result {
 	/**
 	 * The template associated with this recognition result.
 	 */
-	public var template:Template;
+	public var template(default, null):Template;
 	/**
 	 * The probability associated with this recognition result.
 	 */
-	public var prob:Float;
+	public var prob(default, null):Float;
 	/**
 	 * The point sequence associated with this recognition result.
 	 */
-	public var pts:List<Pt>;
+	public var pts(default, null):List<Pt>;
 
 	public function new(template:Template, prob:Float, pts:List<Pt>):Void {
 		this.template = template;
@@ -679,7 +665,6 @@ class Result {
 			-1;
 		}
 	}
-	
 }
 
 private class Pattern {
@@ -692,11 +677,11 @@ private class Pattern {
 }
 
 private class Rect {
-	public var x:Int;
-	public var y:Int;
-	public var width:Int;
-	public var height:Int;
-	public function new(x:Int, y:Int, width:Int, height:Int):Void {
+	public var x(default, null):Float;
+	public var y(default, null):Float;
+	public var width(default, null):Float;
+	public var height(default, null):Float;
+	public function new(x:Float, y:Float, width:Float, height:Float):Void {
 		this.x = x;
 		this.y = y;
 		this.width = width;
@@ -705,8 +690,8 @@ private class Rect {
 }
 
 private class Centroid {
-	public var x:Float;
-	public var y:Float;
+	public var x(default, null):Float;
+	public var y(default, null):Float;
 	public function new(x:Float, y:Float):Void {
 		this.x = x;
 		this.y = y;
@@ -716,10 +701,10 @@ private class Centroid {
 private class IncrementalResult {
 	public var pattern:Pattern;
 	public var prob:Float;
-	public var indexOfMostLikelySegment:Int;
-	public function new(pattern:Pattern, prob:Float, indexOfMostLikelySegment:Int):Void {
+	public var mostLikelySegment:List<Pt>;
+	public function new(pattern:Pattern, prob:Float, mostLikelySegment:List<Pt>):Void {
 		this.pattern = pattern;
 		this.prob = prob;
-		this.indexOfMostLikelySegment = indexOfMostLikelySegment;
+		this.mostLikelySegment = mostLikelySegment;
 	}
 }

@@ -31,9 +31,7 @@ class GestureRecognizer extends Sprite {
 			}
 		}
 		for (i in 0...maxPoints) {
-			var x:Int = Std.int(Math.random() * 800.0);
-			var y:Int = Std.int(Math.random() * 800.0);
-			points.add(new Pt(x, y));
+			points.add(new Pt(Math.random() * 800.0, Math.random() * 800.0));
 		}
 		return new Template(id, points);
 	}
@@ -86,7 +84,7 @@ class GestureRecognizer extends Sprite {
 	function onMousePressed(evt:MouseEvent):Void {
 		mousePressed = true;
 		inputSp.pts.clear();
-		inputSp.pts.add(new Pt(evt.localX.int(), evt.localY.int()));
+		inputSp.pts.add(new Pt(evt.localX, evt.localY));
 	}
 	
 	function onMouseReleased(evt:MouseEvent):Void {
@@ -95,7 +93,7 @@ class GestureRecognizer extends Sprite {
 	
 	function onMouseMoved(evt:MouseEvent):Void {
 		if (mousePressed) {
-			inputSp.pts.add(new Pt(evt.localX.int(), evt.localY.int()));
+			inputSp.pts.add(new Pt(evt.localX, evt.localY));
 			inputSp.redraw();
 			
 			var results = recognizer.recognize(inputSp.pts);
