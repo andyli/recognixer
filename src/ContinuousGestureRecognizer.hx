@@ -1,4 +1,7 @@
 /*
+ * Ported to Haxe by Andy Li
+ * Based on...
+ * 
  * Continuous Recognition and Visualization of Pen Strokes and Touch-Screen Gestures
  * Version: 2.0
  *
@@ -136,7 +139,6 @@ class ContinuousGestureRecognizer
 		return outPts;
 	}
 	
-	/* End of public interface */
 	
 	private inline static var DEFAULT_E_SIGMA:Float = 200.0;
 	private inline static var DEFAULT_BETA:Float = 400.0;
@@ -325,14 +327,14 @@ class ContinuousGestureRecognizer
 		if ((y2 -= y1) < 0) {
 			y2 = -y2;
 		}
-		return (x2 + y2 - (((x2 > y2) ? y2 : x2) * 0.5) );//(x2 + y2 - (((x2 > y2) ? y2 : x2) >> 1) );
+		return (x2 + y2 - ((x2 > y2 ? y2 : x2) * 0.5) );//(x2 + y2 - (((x2 > y2) ? y2 : x2) >> 1) );
 	}
 	
 	private static function getLikelihoodOfMatch(pts1:List<Pt>, pts2:List<Pt>, eSigma:Float, aSigma:Float, lambda:Float):Float {
-		if (eSigma == 0 || eSigma < 0) {
+		if (eSigma <= 0) {
 			throw "eSigma must be positive";
 		}
-		if (aSigma == 0 || eSigma < 0) {
+		if (aSigma <= 0) {
 			throw "aSigma must be positive";
 		}
 		if (lambda < 0 || lambda > 1) {
