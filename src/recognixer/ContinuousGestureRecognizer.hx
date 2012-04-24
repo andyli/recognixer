@@ -32,7 +32,7 @@
  * THE SOFTWARE.
  */
 
-package;
+package recognixer;
 
 /**
  * A continuous gesture recognizer. Outputs a probability distribution over
@@ -133,7 +133,7 @@ class ContinuousGestureRecognizer
 	public static function normalizeBox(pts:List<Pt>, x:Int, y:Int, width:Int, height:Int):List<Pt> {
 		var outPts:List<Pt> = deepCopyPts(pts);
 		scaleTo(outPts, new Rect(0, 0, width - x, height - y));
-		var c:Centroid = getCentroid(outPts);
+		var c:Pt = getCentroid(outPts);
 		translate(outPts, width - x -c.x, height - y -c.y);
 		return outPts;
 	}
@@ -216,7 +216,7 @@ class ContinuousGestureRecognizer
 	
 	private static function normalize(pts:List<Pt>):Void {
 		scaleTo(pts, normalizedSpace);
-		var c:Centroid = getCentroid(pts);
+		var c:Pt = getCentroid(pts);
 		translate(pts, -c.x, -c.y);
 	}
 	
@@ -251,10 +251,11 @@ class ContinuousGestureRecognizer
 	}
 	
 	private static function getBoundingBox(pts:List<Pt>):Rect {
-		var minX = Math.POSITIVE_INFINITY;
-		var minY = Math.POSITIVE_INFINITY;
-		var maxX = Math.NEGATIVE_INFINITY;
-		var maxY = Math.NEGATIVE_INFINITY;
+		var	minX = Math.POSITIVE_INFINITY,
+			minY = Math.POSITIVE_INFINITY,
+			maxX = Math.NEGATIVE_INFINITY,
+			maxY = Math.NEGATIVE_INFINITY;
+		
 		for (pt in pts) {
 			var x = pt.x;
 			var y = pt.y;
@@ -274,7 +275,7 @@ class ContinuousGestureRecognizer
 		return new Rect(minX, minY, (maxX - minX), (maxY - minY));
 	}
 	
-	private static function getCentroid(pts:List<Pt>):Centroid {
+	private static function getCentroid(pts:List<Pt>):Pt {
 		var totalMass:Float = pts.length;
 		var xIntegral:Float = 0.0;
 		var yIntegral:Float = 0.0;
@@ -282,7 +283,7 @@ class ContinuousGestureRecognizer
 			xIntegral+= pt.x;
 			yIntegral+= pt.y;
 		}
-		return new Centroid(xIntegral / totalMass, yIntegral / totalMass);
+		return new Pt(xIntegral / totalMass, yIntegral / totalMass);
 	}
 	
 	private static function generateEquiDistantProgressiveSubSequences(pts:List<Pt>, ptSpacing:Int):List<List<Pt>> {
@@ -601,34 +602,6 @@ class Template {
 
 }
 
-/**
- * Defines a point with optional waypoint information.
- * 
- * @author Per Ola Kristensson
- *
- */
-class Pt {
-
-	/**
-	 * The horizontal component of this point.
-	 */
-	public var x:Float;
-	/**
-	 * The vertical component of this point.
-	 */
-	public var y:Float;
-	
-	/**
-	 * Creates a point.
-	 * 
-	 * @param x the horizontal component of this point
-	 * @param y the vertical component of this point
-	 */
-	public function new(x:Float, y:Float):Void {
-		this.x = x;
-		this.y = y;
-	}
-}
 
 /**
  * Holds a recognition result.
@@ -674,28 +647,6 @@ private class Pattern {
 	public function new(template:Template, segments:List<List<Pt>>):Void {
 		this.template = template;
 		this.segments = segments;
-	}
-}
-
-private class Rect {
-	public var x(default, null):Float;
-	public var y(default, null):Float;
-	public var width(default, null):Float;
-	public var height(default, null):Float;
-	public function new(x:Float, y:Float, width:Float, height:Float):Void {
-		this.x = x;
-		this.y = y;
-		this.width = width;
-		this.height = height;
-	}
-}
-
-private class Centroid {
-	public var x(default, null):Float;
-	public var y(default, null):Float;
-	public function new(x:Float, y:Float):Void {
-		this.x = x;
-		this.y = y;
 	}
 }
 

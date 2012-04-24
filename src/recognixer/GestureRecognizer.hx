@@ -1,10 +1,11 @@
-package;
+package recognixer;
 
 import nme.Lib;
 import nme.display.Sprite;
 import nme.events.Event;
 import nme.events.MouseEvent;
-import ContinuousGestureRecognizer;
+import recognixer.ContinuousGestureRecognizer;
+import recognixer.DollarRecognizer;
 
 using Std;
 using Lambda;

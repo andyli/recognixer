@@ -75,9 +75,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="assets\nme.svg" />
-    <Compile Include="src\GestureRecognizer.hx" />
     <Compile Include="GestureRecognizer.nmml" />
-    <Compile Include="src\ContinuousGestureRecognizer.hx" />
     <Compile Include="bin\index.html" />
+    <Compile Include="src\recognixer\ContinuousGestureRecognizer.hx" />
+    <Compile Include="src\recognixer\DollarRecognizer.hx" />
+    <Compile Include="src\recognixer\GestureRecognizer.hx" />
+    <Compile Include="src\recognixer\Pt.hx" />
+    <Compile Include="src\recognixer\Rect.hx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="src\recognixer\" />
   </ItemGroup>
 </Project>

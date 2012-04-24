@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{319CB2C6-23BD-43E1-85B5-2AAFA3577041}") = "GestureRecognizer", "GestureRecognizer.nmeproj", "{8F36F98A-C73F-4489-8F58-EFFF40A25A31}"
+Project("{319CB2C6-23BD-43E1-85B5-2AAFA3577041}") = "recognixer", "recognixer.nmeproj", "{8F36F98A-C73F-4489-8F58-EFFF40A25A31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,6 +63,6 @@ Global
 		{8F36F98A-C73F-4489-8F58-EFFF40A25A31}.Release|Windows.Build.0 = Release|Windows
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = GestureRecognizer.nmeproj
+		StartupItem = recognixer.nmeproj
 	EndGlobalSection
 EndGlobal
