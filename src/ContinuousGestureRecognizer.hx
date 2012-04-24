@@ -134,8 +134,7 @@ class ContinuousGestureRecognizer
 		var outPts:List<Pt> = deepCopyPts(pts);
 		scaleTo(outPts, new Rect(0, 0, width - x, height - y));
 		var c:Centroid = getCentroid(outPts);
-		translate(outPts, -c.x, -c.y);
-		translate(outPts, width - x, height - y);
+		translate(outPts, width - x -c.x, height - y -c.y);
 		return outPts;
 	}
 	
