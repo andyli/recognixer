@@ -1,5 +1,7 @@
 package recognixer;
 
+using Lambda;
+
 /**
  * Ported to Haxe by Andy Li
  * Based on...
@@ -62,55 +64,59 @@ package recognixer;
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **/
-class DollarRecognizer {
-	//
-	// DollarRecognizer class constants
-	//
-	inline static public var NumTemplates = 16;
-	inline static public var NumPoints = 64;
-	inline static public var SquareSize = 250.0;
-	inline static public var Origin = new Pt(0,0);
-	inline static public var Diagonal = Math.sqrt(SquareSize * SquareSize + SquareSize * SquareSize);
-	inline static public var HalfDiagonal = 0.5 * Diagonal;
-	inline static public var AngleRange = deg2Rad(45.0);
-	inline static public var AnglePrecision = deg2Rad(2.0);
+class DollarRecognizer implements Recognizer {
 	inline static public var Phi = 0.5 * (-1.0 + Math.sqrt(5.0)); // Golden Ratio
 	
 	static public var predefinedTemplate = [
-		new Template("triangle", [new Pt(137,139),new Pt(135,141),new Pt(133,144),new Pt(132,146),new Pt(130,149),new Pt(128,151),new Pt(126,155),new Pt(123,160),new Pt(120,166),new Pt(116,171),new Pt(112,177),new Pt(107,183),new Pt(102,188),new Pt(100,191),new Pt(95,195),new Pt(90,199),new Pt(86,203),new Pt(82,206),new Pt(80,209),new Pt(75,213),new Pt(73,213),new Pt(70,216),new Pt(67,219),new Pt(64,221),new Pt(61,223),new Pt(60,225),new Pt(62,226),new Pt(65,225),new Pt(67,226),new Pt(74,226),new Pt(77,227),new Pt(85,229),new Pt(91,230),new Pt(99,231),new Pt(108,232),new Pt(116,233),new Pt(125,233),new Pt(134,234),new Pt(145,233),new Pt(153,232),new Pt(160,233),new Pt(170,234),new Pt(177,235),new Pt(179,236),new Pt(186,237),new Pt(193,238),new Pt(198,239),new Pt(200,237),new Pt(202,239),new Pt(204,238),new Pt(206,234),new Pt(205,230),new Pt(202,222),new Pt(197,216),new Pt(192,207),new Pt(186,198),new Pt(179,189),new Pt(174,183),new Pt(170,178),new Pt(164,171),new Pt(161,168),new Pt(154,160),new Pt(148,155),new Pt(143,150),new Pt(138,148),new Pt(136,148)]),
-		new Template("x", [new Pt(87,142),new Pt(89,145),new Pt(91,148),new Pt(93,151),new Pt(96,155),new Pt(98,157),new Pt(100,160),new Pt(102,162),new Pt(106,167),new Pt(108,169),new Pt(110,171),new Pt(115,177),new Pt(119,183),new Pt(123,189),new Pt(127,193),new Pt(129,196),new Pt(133,200),new Pt(137,206),new Pt(140,209),new Pt(143,212),new Pt(146,215),new Pt(151,220),new Pt(153,222),new Pt(155,223),new Pt(157,225),new Pt(158,223),new Pt(157,218),new Pt(155,211),new Pt(154,208),new Pt(152,200),new Pt(150,189),new Pt(148,179),new Pt(147,170),new Pt(147,158),new Pt(147,148),new Pt(147,141),new Pt(147,136),new Pt(144,135),new Pt(142,137),new Pt(140,139),new Pt(135,145),new Pt(131,152),new Pt(124,163),new Pt(116,177),new Pt(108,191),new Pt(100,206),new Pt(94,217),new Pt(91,222),new Pt(89,225),new Pt(87,226),new Pt(87,224)]),
-		new Template("rectangle", [new Pt(78,149),new Pt(78,153),new Pt(78,157),new Pt(78,160),new Pt(79,162),new Pt(79,164),new Pt(79,167),new Pt(79,169),new Pt(79,173),new Pt(79,178),new Pt(79,183),new Pt(80,189),new Pt(80,193),new Pt(80,198),new Pt(80,202),new Pt(81,208),new Pt(81,210),new Pt(81,216),new Pt(82,222),new Pt(82,224),new Pt(82,227),new Pt(83,229),new Pt(83,231),new Pt(85,230),new Pt(88,232),new Pt(90,233),new Pt(92,232),new Pt(94,233),new Pt(99,232),new Pt(102,233),new Pt(106,233),new Pt(109,234),new Pt(117,235),new Pt(123,236),new Pt(126,236),new Pt(135,237),new Pt(142,238),new Pt(145,238),new Pt(152,238),new Pt(154,239),new Pt(165,238),new Pt(174,237),new Pt(179,236),new Pt(186,235),new Pt(191,235),new Pt(195,233),new Pt(197,233),new Pt(200,233),new Pt(201,235),new Pt(201,233),new Pt(199,231),new Pt(198,226),new Pt(198,220),new Pt(196,207),new Pt(195,195),new Pt(195,181),new Pt(195,173),new Pt(195,163),new Pt(194,155),new Pt(192,145),new Pt(192,143),new Pt(192,138),new Pt(191,135),new Pt(191,133),new Pt(191,130),new Pt(190,128),new Pt(188,129),new Pt(186,129),new Pt(181,132),new Pt(173,131),new Pt(162,131),new Pt(151,132),new Pt(149,132),new Pt(138,132),new Pt(136,132),new Pt(122,131),new Pt(120,131),new Pt(109,130),new Pt(107,130),new Pt(90,132),new Pt(81,133),new Pt(76,133)]),
-		new Template("circle", [new Pt(127,141),new Pt(124,140),new Pt(120,139),new Pt(118,139),new Pt(116,139),new Pt(111,140),new Pt(109,141),new Pt(104,144),new Pt(100,147),new Pt(96,152),new Pt(93,157),new Pt(90,163),new Pt(87,169),new Pt(85,175),new Pt(83,181),new Pt(82,190),new Pt(82,195),new Pt(83,200),new Pt(84,205),new Pt(88,213),new Pt(91,216),new Pt(96,219),new Pt(103,222),new Pt(108,224),new Pt(111,224),new Pt(120,224),new Pt(133,223),new Pt(142,222),new Pt(152,218),new Pt(160,214),new Pt(167,210),new Pt(173,204),new Pt(178,198),new Pt(179,196),new Pt(182,188),new Pt(182,177),new Pt(178,167),new Pt(170,150),new Pt(163,138),new Pt(152,130),new Pt(143,129),new Pt(140,131),new Pt(129,136),new Pt(126,139)]),
-		new Template("check", [new Pt(91,185),new Pt(93,185),new Pt(95,185),new Pt(97,185),new Pt(100,188),new Pt(102,189),new Pt(104,190),new Pt(106,193),new Pt(108,195),new Pt(110,198),new Pt(112,201),new Pt(114,204),new Pt(115,207),new Pt(117,210),new Pt(118,212),new Pt(120,214),new Pt(121,217),new Pt(122,219),new Pt(123,222),new Pt(124,224),new Pt(126,226),new Pt(127,229),new Pt(129,231),new Pt(130,233),new Pt(129,231),new Pt(129,228),new Pt(129,226),new Pt(129,224),new Pt(129,221),new Pt(129,218),new Pt(129,212),new Pt(129,208),new Pt(130,198),new Pt(132,189),new Pt(134,182),new Pt(137,173),new Pt(143,164),new Pt(147,157),new Pt(151,151),new Pt(155,144),new Pt(161,137),new Pt(165,131),new Pt(171,122),new Pt(174,118),new Pt(176,114),new Pt(177,112),new Pt(177,114),new Pt(175,116),new Pt(173,118)]),
-		new Template("caret", [new Pt(79,245),new Pt(79,242),new Pt(79,239),new Pt(80,237),new Pt(80,234),new Pt(81,232),new Pt(82,230),new Pt(84,224),new Pt(86,220),new Pt(86,218),new Pt(87,216),new Pt(88,213),new Pt(90,207),new Pt(91,202),new Pt(92,200),new Pt(93,194),new Pt(94,192),new Pt(96,189),new Pt(97,186),new Pt(100,179),new Pt(102,173),new Pt(105,165),new Pt(107,160),new Pt(109,158),new Pt(112,151),new Pt(115,144),new Pt(117,139),new Pt(119,136),new Pt(119,134),new Pt(120,132),new Pt(121,129),new Pt(122,127),new Pt(124,125),new Pt(126,124),new Pt(129,125),new Pt(131,127),new Pt(132,130),new Pt(136,139),new Pt(141,154),new Pt(145,166),new Pt(151,182),new Pt(156,193),new Pt(157,196),new Pt(161,209),new Pt(162,211),new Pt(167,223),new Pt(169,229),new Pt(170,231),new Pt(173,237),new Pt(176,242),new Pt(177,244),new Pt(179,250),new Pt(181,255),new Pt(182,257)]),
-		new Template("zig-zag", [new Pt(307,216),new Pt(333,186),new Pt(356,215),new Pt(375,186),new Pt(399,216),new Pt(418,186)]),
-		new Template("arrow", [new Pt(68,222),new Pt(70,220),new Pt(73,218),new Pt(75,217),new Pt(77,215),new Pt(80,213),new Pt(82,212),new Pt(84,210),new Pt(87,209),new Pt(89,208),new Pt(92,206),new Pt(95,204),new Pt(101,201),new Pt(106,198),new Pt(112,194),new Pt(118,191),new Pt(124,187),new Pt(127,186),new Pt(132,183),new Pt(138,181),new Pt(141,180),new Pt(146,178),new Pt(154,173),new Pt(159,171),new Pt(161,170),new Pt(166,167),new Pt(168,167),new Pt(171,166),new Pt(174,164),new Pt(177,162),new Pt(180,160),new Pt(182,158),new Pt(183,156),new Pt(181,154),new Pt(178,153),new Pt(171,153),new Pt(164,153),new Pt(160,153),new Pt(150,154),new Pt(147,155),new Pt(141,157),new Pt(137,158),new Pt(135,158),new Pt(137,158),new Pt(140,157),new Pt(143,156),new Pt(151,154),new Pt(160,152),new Pt(170,149),new Pt(179,147),new Pt(185,145),new Pt(192,144),new Pt(196,144),new Pt(198,144),new Pt(200,144),new Pt(201,147),new Pt(199,149),new Pt(194,157),new Pt(191,160),new Pt(186,167),new Pt(180,176),new Pt(177,179),new Pt(171,187),new Pt(169,189),new Pt(165,194),new Pt(164,196)]),
-		new Template("left square bracket", [new Pt(140,124),new Pt(138,123),new Pt(135,122),new Pt(133,123),new Pt(130,123),new Pt(128,124),new Pt(125,125),new Pt(122,124),new Pt(120,124),new Pt(118,124),new Pt(116,125),new Pt(113,125),new Pt(111,125),new Pt(108,124),new Pt(106,125),new Pt(104,125),new Pt(102,124),new Pt(100,123),new Pt(98,123),new Pt(95,124),new Pt(93,123),new Pt(90,124),new Pt(88,124),new Pt(85,125),new Pt(83,126),new Pt(81,127),new Pt(81,129),new Pt(82,131),new Pt(82,134),new Pt(83,138),new Pt(84,141),new Pt(84,144),new Pt(85,148),new Pt(85,151),new Pt(86,156),new Pt(86,160),new Pt(86,164),new Pt(86,168),new Pt(87,171),new Pt(87,175),new Pt(87,179),new Pt(87,182),new Pt(87,186),new Pt(88,188),new Pt(88,195),new Pt(88,198),new Pt(88,201),new Pt(88,207),new Pt(89,211),new Pt(89,213),new Pt(89,217),new Pt(89,222),new Pt(88,225),new Pt(88,229),new Pt(88,231),new Pt(88,233),new Pt(88,235),new Pt(89,237),new Pt(89,240),new Pt(89,242),new Pt(91,241),new Pt(94,241),new Pt(96,240),new Pt(98,239),new Pt(105,240),new Pt(109,240),new Pt(113,239),new Pt(116,240),new Pt(121,239),new Pt(130,240),new Pt(136,237),new Pt(139,237),new Pt(144,238),new Pt(151,237),new Pt(157,236),new Pt(159,237)]),
-		new Template("right square bracket", [new Pt(112,138),new Pt(112,136),new Pt(115,136),new Pt(118,137),new Pt(120,136),new Pt(123,136),new Pt(125,136),new Pt(128,136),new Pt(131,136),new Pt(134,135),new Pt(137,135),new Pt(140,134),new Pt(143,133),new Pt(145,132),new Pt(147,132),new Pt(149,132),new Pt(152,132),new Pt(153,134),new Pt(154,137),new Pt(155,141),new Pt(156,144),new Pt(157,152),new Pt(158,161),new Pt(160,170),new Pt(162,182),new Pt(164,192),new Pt(166,200),new Pt(167,209),new Pt(168,214),new Pt(168,216),new Pt(169,221),new Pt(169,223),new Pt(169,228),new Pt(169,231),new Pt(166,233),new Pt(164,234),new Pt(161,235),new Pt(155,236),new Pt(147,235),new Pt(140,233),new Pt(131,233),new Pt(124,233),new Pt(117,235),new Pt(114,238),new Pt(112,238)]),
-		new Template("v", [new Pt(89,164),new Pt(90,162),new Pt(92,162),new Pt(94,164),new Pt(95,166),new Pt(96,169),new Pt(97,171),new Pt(99,175),new Pt(101,178),new Pt(103,182),new Pt(106,189),new Pt(108,194),new Pt(111,199),new Pt(114,204),new Pt(117,209),new Pt(119,214),new Pt(122,218),new Pt(124,222),new Pt(126,225),new Pt(128,228),new Pt(130,229),new Pt(133,233),new Pt(134,236),new Pt(136,239),new Pt(138,240),new Pt(139,242),new Pt(140,244),new Pt(142,242),new Pt(142,240),new Pt(142,237),new Pt(143,235),new Pt(143,233),new Pt(145,229),new Pt(146,226),new Pt(148,217),new Pt(149,208),new Pt(149,205),new Pt(151,196),new Pt(151,193),new Pt(153,182),new Pt(155,172),new Pt(157,165),new Pt(159,160),new Pt(162,155),new Pt(164,150),new Pt(165,148),new Pt(166,146)]),
-		new Template("delete", [new Pt(123,129),new Pt(123,131),new Pt(124,133),new Pt(125,136),new Pt(127,140),new Pt(129,142),new Pt(133,148),new Pt(137,154),new Pt(143,158),new Pt(145,161),new Pt(148,164),new Pt(153,170),new Pt(158,176),new Pt(160,178),new Pt(164,183),new Pt(168,188),new Pt(171,191),new Pt(175,196),new Pt(178,200),new Pt(180,202),new Pt(181,205),new Pt(184,208),new Pt(186,210),new Pt(187,213),new Pt(188,215),new Pt(186,212),new Pt(183,211),new Pt(177,208),new Pt(169,206),new Pt(162,205),new Pt(154,207),new Pt(145,209),new Pt(137,210),new Pt(129,214),new Pt(122,217),new Pt(118,218),new Pt(111,221),new Pt(109,222),new Pt(110,219),new Pt(112,217),new Pt(118,209),new Pt(120,207),new Pt(128,196),new Pt(135,187),new Pt(138,183),new Pt(148,167),new Pt(157,153),new Pt(163,145),new Pt(165,142),new Pt(172,133),new Pt(177,127),new Pt(179,127),new Pt(180,125)]),
-		new Template("left curly brace", [new Pt(150,116),new Pt(147,117),new Pt(145,116),new Pt(142,116),new Pt(139,117),new Pt(136,117),new Pt(133,118),new Pt(129,121),new Pt(126,122),new Pt(123,123),new Pt(120,125),new Pt(118,127),new Pt(115,128),new Pt(113,129),new Pt(112,131),new Pt(113,134),new Pt(115,134),new Pt(117,135),new Pt(120,135),new Pt(123,137),new Pt(126,138),new Pt(129,140),new Pt(135,143),new Pt(137,144),new Pt(139,147),new Pt(141,149),new Pt(140,152),new Pt(139,155),new Pt(134,159),new Pt(131,161),new Pt(124,166),new Pt(121,166),new Pt(117,166),new Pt(114,167),new Pt(112,166),new Pt(114,164),new Pt(116,163),new Pt(118,163),new Pt(120,162),new Pt(122,163),new Pt(125,164),new Pt(127,165),new Pt(129,166),new Pt(130,168),new Pt(129,171),new Pt(127,175),new Pt(125,179),new Pt(123,184),new Pt(121,190),new Pt(120,194),new Pt(119,199),new Pt(120,202),new Pt(123,207),new Pt(127,211),new Pt(133,215),new Pt(142,219),new Pt(148,220),new Pt(151,221)]),
-		new Template("right curly brace", [new Pt(117,132),new Pt(115,132),new Pt(115,129),new Pt(117,129),new Pt(119,128),new Pt(122,127),new Pt(125,127),new Pt(127,127),new Pt(130,127),new Pt(133,129),new Pt(136,129),new Pt(138,130),new Pt(140,131),new Pt(143,134),new Pt(144,136),new Pt(145,139),new Pt(145,142),new Pt(145,145),new Pt(145,147),new Pt(145,149),new Pt(144,152),new Pt(142,157),new Pt(141,160),new Pt(139,163),new Pt(137,166),new Pt(135,167),new Pt(133,169),new Pt(131,172),new Pt(128,173),new Pt(126,176),new Pt(125,178),new Pt(125,180),new Pt(125,182),new Pt(126,184),new Pt(128,187),new Pt(130,187),new Pt(132,188),new Pt(135,189),new Pt(140,189),new Pt(145,189),new Pt(150,187),new Pt(155,186),new Pt(157,185),new Pt(159,184),new Pt(156,185),new Pt(154,185),new Pt(149,185),new Pt(145,187),new Pt(141,188),new Pt(136,191),new Pt(134,191),new Pt(131,192),new Pt(129,193),new Pt(129,195),new Pt(129,197),new Pt(131,200),new Pt(133,202),new Pt(136,206),new Pt(139,211),new Pt(142,215),new Pt(145,220),new Pt(147,225),new Pt(148,231),new Pt(147,239),new Pt(144,244),new Pt(139,248),new Pt(134,250),new Pt(126,253),new Pt(119,253),new Pt(115,253)]),
-		new Template("star", [new Pt(75,250),new Pt(75,247),new Pt(77,244),new Pt(78,242),new Pt(79,239),new Pt(80,237),new Pt(82,234),new Pt(82,232),new Pt(84,229),new Pt(85,225),new Pt(87,222),new Pt(88,219),new Pt(89,216),new Pt(91,212),new Pt(92,208),new Pt(94,204),new Pt(95,201),new Pt(96,196),new Pt(97,194),new Pt(98,191),new Pt(100,185),new Pt(102,178),new Pt(104,173),new Pt(104,171),new Pt(105,164),new Pt(106,158),new Pt(107,156),new Pt(107,152),new Pt(108,145),new Pt(109,141),new Pt(110,139),new Pt(112,133),new Pt(113,131),new Pt(116,127),new Pt(117,125),new Pt(119,122),new Pt(121,121),new Pt(123,120),new Pt(125,122),new Pt(125,125),new Pt(127,130),new Pt(128,133),new Pt(131,143),new Pt(136,153),new Pt(140,163),new Pt(144,172),new Pt(145,175),new Pt(151,189),new Pt(156,201),new Pt(161,213),new Pt(166,225),new Pt(169,233),new Pt(171,236),new Pt(174,243),new Pt(177,247),new Pt(178,249),new Pt(179,251),new Pt(180,253),new Pt(180,255),new Pt(179,257),new Pt(177,257),new Pt(174,255),new Pt(169,250),new Pt(164,247),new Pt(160,245),new Pt(149,238),new Pt(138,230),new Pt(127,221),new Pt(124,220),new Pt(112,212),new Pt(110,210),new Pt(96,201),new Pt(84,195),new Pt(74,190),new Pt(64,182),new Pt(55,175),new Pt(51,172),new Pt(49,170),new Pt(51,169),new Pt(56,169),new Pt(66,169),new Pt(78,168),new Pt(92,166),new Pt(107,164),new Pt(123,161),new Pt(140,162),new Pt(156,162),new Pt(171,160),new Pt(173,160),new Pt(186,160),new Pt(195,160),new Pt(198,161),new Pt(203,163),new Pt(208,163),new Pt(206,164),new Pt(200,167),new Pt(187,172),new Pt(174,179),new Pt(172,181),new Pt(153,192),new Pt(137,201),new Pt(123,211),new Pt(112,220),new Pt(99,229),new Pt(90,237),new Pt(80,244),new Pt(73,250),new Pt(69,254),new Pt(69,252)]),
-		new Template("pigtail", [new Pt(81,219),new Pt(84,218),new Pt(86,220),new Pt(88,220),new Pt(90,220),new Pt(92,219),new Pt(95,220),new Pt(97,219),new Pt(99,220),new Pt(102,218),new Pt(105,217),new Pt(107,216),new Pt(110,216),new Pt(113,214),new Pt(116,212),new Pt(118,210),new Pt(121,208),new Pt(124,205),new Pt(126,202),new Pt(129,199),new Pt(132,196),new Pt(136,191),new Pt(139,187),new Pt(142,182),new Pt(144,179),new Pt(146,174),new Pt(148,170),new Pt(149,168),new Pt(151,162),new Pt(152,160),new Pt(152,157),new Pt(152,155),new Pt(152,151),new Pt(152,149),new Pt(152,146),new Pt(149,142),new Pt(148,139),new Pt(145,137),new Pt(141,135),new Pt(139,135),new Pt(134,136),new Pt(130,140),new Pt(128,142),new Pt(126,145),new Pt(122,150),new Pt(119,158),new Pt(117,163),new Pt(115,170),new Pt(114,175),new Pt(117,184),new Pt(120,190),new Pt(125,199),new Pt(129,203),new Pt(133,208),new Pt(138,213),new Pt(145,215),new Pt(155,218),new Pt(164,219),new Pt(166,219),new Pt(177,219),new Pt(182,218),new Pt(192,216),new Pt(196,213),new Pt(199,212),new Pt(201,211)])
+		{ id:"triangle", points:[new Pt(548,356), new Pt(540,364), new Pt(532,376), new Pt(528,384), new Pt(520,396), new Pt(512,404), new Pt(504,420), new Pt(492,440), new Pt(480,464), new Pt(464,484), new Pt(448,508), new Pt(428,532), new Pt(408,552), new Pt(400,564), new Pt(380,580), new Pt(360,596), new Pt(344,612), new Pt(328,624), new Pt(320,636), new Pt(300,652), new Pt(292,652), new Pt(280,664), new Pt(268,676), new Pt(256,684), new Pt(244,692), new Pt(240,700), new Pt(248,704), new Pt(260,700), new Pt(268,704), new Pt(296,704), new Pt(308,708), new Pt(340,716), new Pt(364,720), new Pt(396,724), new Pt(432,728), new Pt(464,732), new Pt(500,732), new Pt(536,736), new Pt(580,732), new Pt(612,728), new Pt(640,732), new Pt(680,736), new Pt(708,740), new Pt(716,744), new Pt(744,748), new Pt(772,752), new Pt(792,756), new Pt(800,748), new Pt(808,756), new Pt(816,752), new Pt(824,736), new Pt(820,720), new Pt(808,688), new Pt(788,664), new Pt(768,628), new Pt(744,592), new Pt(716,556), new Pt(696,532), new Pt(680,512), new Pt(656,484), new Pt(644,472), new Pt(616,440), new Pt(592,420), new Pt(572,400), new Pt(552,392), new Pt(544,392)]},
+		{ id:"x", points:[new Pt(348,368), new Pt(356,380), new Pt(364,392), new Pt(372,404), new Pt(384,420), new Pt(392,428), new Pt(400,440), new Pt(408,448), new Pt(424,468), new Pt(432,476), new Pt(440,484), new Pt(460,508), new Pt(476,532), new Pt(492,556), new Pt(508,572), new Pt(516,584), new Pt(532,600), new Pt(548,624), new Pt(560,636), new Pt(572,648), new Pt(584,660), new Pt(604,680), new Pt(612,688), new Pt(620,692), new Pt(628,700), new Pt(632,692), new Pt(628,672), new Pt(620,644), new Pt(616,632), new Pt(608,600), new Pt(600,556), new Pt(592,516), new Pt(588,480), new Pt(588,432), new Pt(588,392), new Pt(588,364), new Pt(588,344), new Pt(576,340), new Pt(568,348), new Pt(560,356), new Pt(540,380), new Pt(524,408), new Pt(496,452), new Pt(464,508), new Pt(432,564), new Pt(400,624), new Pt(376,668), new Pt(364,688), new Pt(356,700), new Pt(348,704), new Pt(348,696)]},
+		{ id:"rectangle", points:[new Pt(312,396), new Pt(312,412), new Pt(312,428), new Pt(312,440), new Pt(316,448), new Pt(316,456), new Pt(316,468), new Pt(316,476), new Pt(316,492), new Pt(316,512), new Pt(316,532), new Pt(320,556), new Pt(320,572), new Pt(320,592), new Pt(320,608), new Pt(324,632), new Pt(324,640), new Pt(324,664), new Pt(328,688), new Pt(328,696), new Pt(328,708), new Pt(332,716), new Pt(332,724), new Pt(340,720), new Pt(352,728), new Pt(360,732), new Pt(368,728), new Pt(376,732), new Pt(396,728), new Pt(408,732), new Pt(424,732), new Pt(436,736), new Pt(468,740), new Pt(492,744), new Pt(504,744), new Pt(540,748), new Pt(568,752), new Pt(580,752), new Pt(608,752), new Pt(616,756), new Pt(660,752), new Pt(696,748), new Pt(716,744), new Pt(744,740), new Pt(764,740), new Pt(780,732), new Pt(788,732), new Pt(800,732), new Pt(804,740), new Pt(804,732), new Pt(796,724), new Pt(792,704), new Pt(792,680), new Pt(784,628), new Pt(780,580), new Pt(780,524), new Pt(780,492), new Pt(780,452), new Pt(776,420), new Pt(768,380), new Pt(768,372), new Pt(768,352), new Pt(764,340), new Pt(764,332), new Pt(764,320), new Pt(760,312), new Pt(752,316), new Pt(744,316), new Pt(724,328), new Pt(692,324), new Pt(648,324), new Pt(604,328), new Pt(596,328), new Pt(552,328), new Pt(544,328), new Pt(488,324), new Pt(480,324), new Pt(436,320), new Pt(428,320), new Pt(360,328), new Pt(324,332), new Pt(304,332)]},
+		{ id:"circle", points:[new Pt(508,364), new Pt(496,360), new Pt(480,356), new Pt(472,356), new Pt(464,356), new Pt(444,360), new Pt(436,364), new Pt(416,376), new Pt(400,388), new Pt(384,408), new Pt(372,428), new Pt(360,452), new Pt(348,476), new Pt(340,500), new Pt(332,524), new Pt(328,560), new Pt(328,580), new Pt(332,600), new Pt(336,620), new Pt(352,652), new Pt(364,664), new Pt(384,676), new Pt(412,688), new Pt(432,696), new Pt(444,696), new Pt(480,696), new Pt(532,692), new Pt(568,688), new Pt(608,672), new Pt(640,656), new Pt(668,640), new Pt(692,616), new Pt(712,592), new Pt(716,584), new Pt(728,552), new Pt(728,508), new Pt(712,468), new Pt(680,400), new Pt(652,352), new Pt(608,320), new Pt(572,316), new Pt(560,324), new Pt(516,344), new Pt(504,356)]},
+		{ id:"check", points:[new Pt(364,540), new Pt(372,540), new Pt(380,540), new Pt(388,540), new Pt(400,552), new Pt(408,556), new Pt(416,560), new Pt(424,572), new Pt(432,580), new Pt(440,592), new Pt(448,604), new Pt(456,616), new Pt(460,628), new Pt(468,640), new Pt(472,648), new Pt(480,656), new Pt(484,668), new Pt(488,676), new Pt(492,688), new Pt(496,696), new Pt(504,704), new Pt(508,716), new Pt(516,724), new Pt(520,732), new Pt(516,724), new Pt(516,712), new Pt(516,704), new Pt(516,696), new Pt(516,684), new Pt(516,672), new Pt(516,648), new Pt(516,632), new Pt(520,592), new Pt(528,556), new Pt(536,528), new Pt(548,492), new Pt(572,456), new Pt(588,428), new Pt(604,404), new Pt(620,376), new Pt(644,348), new Pt(660,324), new Pt(684,288), new Pt(696,272), new Pt(704,256), new Pt(708,248), new Pt(708,256), new Pt(700,264), new Pt(692,272)]},
+		{ id:"caret", points:[new Pt(316,780), new Pt(316,768), new Pt(316,756), new Pt(320,748), new Pt(320,736), new Pt(324,728), new Pt(328,720), new Pt(336,696), new Pt(344,680), new Pt(344,672), new Pt(348,664), new Pt(352,652), new Pt(360,628), new Pt(364,608), new Pt(368,600), new Pt(372,576), new Pt(376,568), new Pt(384,556), new Pt(388,544), new Pt(400,516), new Pt(408,492), new Pt(420,460), new Pt(428,440), new Pt(436,432), new Pt(448,404), new Pt(460,376), new Pt(468,356), new Pt(476,344), new Pt(476,336), new Pt(480,328), new Pt(484,316), new Pt(488,308), new Pt(496,300), new Pt(504,296), new Pt(516,300), new Pt(524,308), new Pt(528,320), new Pt(544,356), new Pt(564,416), new Pt(580,464), new Pt(604,528), new Pt(624,572), new Pt(628,584), new Pt(644,636), new Pt(648,644), new Pt(668,692), new Pt(676,716), new Pt(680,724), new Pt(692,748), new Pt(704,768), new Pt(708,776), new Pt(716,800), new Pt(724,820), new Pt(728,828)]},
+		{ id:"zig-zag", points:[new Pt(228,664), new Pt(332,544), new Pt(424,660), new Pt(500,544), new Pt(596,664), new Pt(672,544)]},
+		{ id:"arrow", points:[new Pt(272,688), new Pt(280,680), new Pt(292,672), new Pt(300,668), new Pt(308,660), new Pt(320,652), new Pt(328,648), new Pt(336,640), new Pt(348,636), new Pt(356,632), new Pt(368,624), new Pt(380,616), new Pt(404,604), new Pt(424,592), new Pt(448,576), new Pt(472,564), new Pt(496,548), new Pt(508,544), new Pt(528,532), new Pt(552,524), new Pt(564,520), new Pt(584,512), new Pt(616,492), new Pt(636,484), new Pt(644,480), new Pt(664,468), new Pt(672,468), new Pt(684,464), new Pt(696,456), new Pt(708,448), new Pt(720,440), new Pt(728,432), new Pt(732,424), new Pt(724,416), new Pt(712,412), new Pt(684,412), new Pt(656,412), new Pt(640,412), new Pt(600,416), new Pt(588,420), new Pt(564,428), new Pt(548,432), new Pt(540,432), new Pt(548,432), new Pt(560,428), new Pt(572,424), new Pt(604,416), new Pt(640,408), new Pt(680,396), new Pt(716,388), new Pt(740,380), new Pt(768,376), new Pt(784,376), new Pt(792,376), new Pt(800,376), new Pt(804,388), new Pt(796,396), new Pt(776,428), new Pt(764,440), new Pt(744,468), new Pt(720,504), new Pt(708,516), new Pt(684,548), new Pt(676,556), new Pt(660,576), new Pt(656,584)]},
+		{ id:"left square bracket", points:[new Pt(560,296), new Pt(552,292), new Pt(540,288), new Pt(532,292), new Pt(520,292), new Pt(512,296), new Pt(500,300), new Pt(488,296), new Pt(480,296), new Pt(472,296), new Pt(464,300), new Pt(452,300), new Pt(444,300), new Pt(432,296), new Pt(424,300), new Pt(416,300), new Pt(408,296), new Pt(400,292), new Pt(392,292), new Pt(380,296), new Pt(372,292), new Pt(360,296), new Pt(352,296), new Pt(340,300), new Pt(332,304), new Pt(324,308), new Pt(324,316), new Pt(328,324), new Pt(328,336), new Pt(332,352), new Pt(336,364), new Pt(336,376), new Pt(340,392), new Pt(340,404), new Pt(344,424), new Pt(344,440), new Pt(344,456), new Pt(344,472), new Pt(348,484), new Pt(348,500), new Pt(348,516), new Pt(348,528), new Pt(348,544), new Pt(352,552), new Pt(352,580), new Pt(352,592), new Pt(352,604), new Pt(352,628), new Pt(356,644), new Pt(356,652), new Pt(356,668), new Pt(356,688), new Pt(352,700), new Pt(352,716), new Pt(352,724), new Pt(352,732), new Pt(352,740), new Pt(356,748), new Pt(356,760), new Pt(356,768), new Pt(364,764), new Pt(376,764), new Pt(384,760), new Pt(392,756), new Pt(420,760), new Pt(436,760), new Pt(452,756), new Pt(464,760), new Pt(484,756), new Pt(520,760), new Pt(544,748), new Pt(556,748), new Pt(576,752), new Pt(604,748), new Pt(628,744), new Pt(636,748)]},
+		{ id:"right square bracket", points:[new Pt(448,352), new Pt(448,344), new Pt(460,344), new Pt(472,348), new Pt(480,344), new Pt(492,344), new Pt(500,344), new Pt(512,344), new Pt(524,344), new Pt(536,340), new Pt(548,340), new Pt(560,336), new Pt(572,332), new Pt(580,328), new Pt(588,328), new Pt(596,328), new Pt(608,328), new Pt(612,336), new Pt(616,348), new Pt(620,364), new Pt(624,376), new Pt(628,408), new Pt(632,444), new Pt(640,480), new Pt(648,528), new Pt(656,568), new Pt(664,600), new Pt(668,636), new Pt(672,656), new Pt(672,664), new Pt(676,684), new Pt(676,692), new Pt(676,712), new Pt(676,724), new Pt(664,732), new Pt(656,736), new Pt(644,740), new Pt(620,744), new Pt(588,740), new Pt(560,732), new Pt(524,732), new Pt(496,732), new Pt(468,740), new Pt(456,752), new Pt(448,752)]},
+		{ id:"v", points:[new Pt(356,456), new Pt(360,448), new Pt(368,448), new Pt(376,456), new Pt(380,464), new Pt(384,476), new Pt(388,484), new Pt(396,500), new Pt(404,512), new Pt(412,528), new Pt(424,556), new Pt(432,576), new Pt(444,596), new Pt(456,616), new Pt(468,636), new Pt(476,656), new Pt(488,672), new Pt(496,688), new Pt(504,700), new Pt(512,712), new Pt(520,716), new Pt(532,732), new Pt(536,744), new Pt(544,756), new Pt(552,760), new Pt(556,768), new Pt(560,776), new Pt(568,768), new Pt(568,760), new Pt(568,748), new Pt(572,740), new Pt(572,732), new Pt(580,716), new Pt(584,704), new Pt(592,668), new Pt(596,632), new Pt(596,620), new Pt(604,584), new Pt(604,572), new Pt(612,528), new Pt(620,488), new Pt(628,460), new Pt(636,440), new Pt(648,420), new Pt(656,400), new Pt(660,392), new Pt(664,384)]},
+		{ id:"delete", points:[new Pt(492,316), new Pt(492,324), new Pt(496,332), new Pt(500,344), new Pt(508,360), new Pt(516,368), new Pt(532,392), new Pt(548,416), new Pt(572,432), new Pt(580,444), new Pt(592,456), new Pt(612,480), new Pt(632,504), new Pt(640,512), new Pt(656,532), new Pt(672,552), new Pt(684,564), new Pt(700,584), new Pt(712,600), new Pt(720,608), new Pt(724,620), new Pt(736,632), new Pt(744,640), new Pt(748,652), new Pt(752,660), new Pt(744,648), new Pt(732,644), new Pt(708,632), new Pt(676,624), new Pt(648,620), new Pt(616,628), new Pt(580,636), new Pt(548,640), new Pt(516,656), new Pt(488,668), new Pt(472,672), new Pt(444,684), new Pt(436,688), new Pt(440,676), new Pt(448,668), new Pt(472,636), new Pt(480,628), new Pt(512,584), new Pt(540,548), new Pt(552,532), new Pt(592,468), new Pt(628,412), new Pt(652,380), new Pt(660,368), new Pt(688,332), new Pt(708,308), new Pt(716,308), new Pt(720,300)]},
+		{ id:"left curly brace", points:[new Pt(600,264), new Pt(588,268), new Pt(580,264), new Pt(568,264), new Pt(556,268), new Pt(544,268), new Pt(532,272), new Pt(516,284), new Pt(504,288), new Pt(492,292), new Pt(480,300), new Pt(472,308), new Pt(460,312), new Pt(452,316), new Pt(448,324), new Pt(452,336), new Pt(460,336), new Pt(468,340), new Pt(480,340), new Pt(492,348), new Pt(504,352), new Pt(516,360), new Pt(540,372), new Pt(548,376), new Pt(556,388), new Pt(564,396), new Pt(560,408), new Pt(556,420), new Pt(536,436), new Pt(524,444), new Pt(496,464), new Pt(484,464), new Pt(468,464), new Pt(456,468), new Pt(448,464), new Pt(456,456), new Pt(464,452), new Pt(472,452), new Pt(480,448), new Pt(488,452), new Pt(500,456), new Pt(508,460), new Pt(516,464), new Pt(520,472), new Pt(516,484), new Pt(508,500), new Pt(500,516), new Pt(492,536), new Pt(484,560), new Pt(480,576), new Pt(476,596), new Pt(480,608), new Pt(492,628), new Pt(508,644), new Pt(532,660), new Pt(568,676), new Pt(592,680), new Pt(604,684)]},
+		{ id:"right curly brace", points:[new Pt(468,328), new Pt(460,328), new Pt(460,316), new Pt(468,316), new Pt(476,312), new Pt(488,308), new Pt(500,308), new Pt(508,308), new Pt(520,308), new Pt(532,316), new Pt(544,316), new Pt(552,320), new Pt(560,324), new Pt(572,336), new Pt(576,344), new Pt(580,356), new Pt(580,368), new Pt(580,380), new Pt(580,388), new Pt(580,396), new Pt(576,408), new Pt(568,428), new Pt(564,440), new Pt(556,452), new Pt(548,464), new Pt(540,468), new Pt(532,476), new Pt(524,488), new Pt(512,492), new Pt(504,504), new Pt(500,512), new Pt(500,520), new Pt(500,528), new Pt(504,536), new Pt(512,548), new Pt(520,548), new Pt(528,552), new Pt(540,556), new Pt(560,556), new Pt(580,556), new Pt(600,548), new Pt(620,544), new Pt(628,540), new Pt(636,536), new Pt(624,540), new Pt(616,540), new Pt(596,540), new Pt(580,548), new Pt(564,552), new Pt(544,564), new Pt(536,564), new Pt(524,568), new Pt(516,572), new Pt(516,580), new Pt(516,588), new Pt(524,600), new Pt(532,608), new Pt(544,624), new Pt(556,644), new Pt(568,660), new Pt(580,680), new Pt(588,700), new Pt(592,724), new Pt(588,756), new Pt(576,776), new Pt(556,792), new Pt(536,800), new Pt(504,812), new Pt(476,812), new Pt(460,812)]},
+		{ id:"star", points:[new Pt(300,800), new Pt(300,788), new Pt(308,776), new Pt(312,768), new Pt(316,756), new Pt(320,748), new Pt(328,736), new Pt(328,728), new Pt(336,716), new Pt(340,700), new Pt(348,688), new Pt(352,676), new Pt(356,664), new Pt(364,648), new Pt(368,632), new Pt(376,616), new Pt(380,604), new Pt(384,584), new Pt(388,576), new Pt(392,564), new Pt(400,540), new Pt(408,512), new Pt(416,492), new Pt(416,484), new Pt(420,456), new Pt(424,432), new Pt(428,424), new Pt(428,408), new Pt(432,380), new Pt(436,364), new Pt(440,356), new Pt(448,332), new Pt(452,324), new Pt(464,308), new Pt(468,300), new Pt(476,288), new Pt(484,284), new Pt(492,280), new Pt(500,288), new Pt(500,300), new Pt(508,320), new Pt(512,332), new Pt(524,372), new Pt(544,412), new Pt(560,452), new Pt(576,488), new Pt(580,500), new Pt(604,556), new Pt(624,604), new Pt(644,652), new Pt(664,700), new Pt(676,732), new Pt(684,744), new Pt(696,772), new Pt(708,788), new Pt(712,796), new Pt(716,804), new Pt(720,812), new Pt(720,820), new Pt(716,828), new Pt(708,828), new Pt(696,820), new Pt(676,800), new Pt(656,788), new Pt(640,780), new Pt(596,752), new Pt(552,720), new Pt(508,684), new Pt(496,680), new Pt(448,648), new Pt(440,640), new Pt(384,604), new Pt(336,580), new Pt(296,560), new Pt(256,528), new Pt(220,500), new Pt(204,488), new Pt(196,480), new Pt(204,476), new Pt(224,476), new Pt(264,476), new Pt(312,472), new Pt(368,464), new Pt(428,456), new Pt(492,444), new Pt(560,448), new Pt(624,448), new Pt(684,440), new Pt(692,440), new Pt(744,440), new Pt(780,440), new Pt(792,444), new Pt(812,452), new Pt(832,452), new Pt(824,456), new Pt(800,468), new Pt(748,488), new Pt(696,516), new Pt(688,524), new Pt(612,568), new Pt(548,604), new Pt(492,644), new Pt(448,680), new Pt(396,716), new Pt(360,748), new Pt(320,776), new Pt(292,800), new Pt(276,816), new Pt(276,808)]},
+		{ id:"pigtail", points:[new Pt(324,676), new Pt(336,672), new Pt(344,680), new Pt(352,680), new Pt(360,680), new Pt(368,676), new Pt(380,680), new Pt(388,676), new Pt(396,680), new Pt(408,672), new Pt(420,668), new Pt(428,664), new Pt(440,664), new Pt(452,656), new Pt(464,648), new Pt(472,640), new Pt(484,632), new Pt(496,620), new Pt(504,608), new Pt(516,596), new Pt(528,584), new Pt(544,564), new Pt(556,548), new Pt(568,528), new Pt(576,516), new Pt(584,496), new Pt(592,480), new Pt(596,472), new Pt(604,448), new Pt(608,440), new Pt(608,428), new Pt(608,420), new Pt(608,404), new Pt(608,396), new Pt(608,384), new Pt(596,368), new Pt(592,356), new Pt(580,348), new Pt(564,340), new Pt(556,340), new Pt(536,344), new Pt(520,360), new Pt(512,368), new Pt(504,380), new Pt(488,400), new Pt(476,432), new Pt(468,452), new Pt(460,480), new Pt(456,500), new Pt(468,536), new Pt(480,560), new Pt(500,596), new Pt(516,612), new Pt(532,632), new Pt(552,652), new Pt(580,660), new Pt(620,672), new Pt(656,676), new Pt(664,676), new Pt(708,676), new Pt(728,672), new Pt(768,664), new Pt(784,652), new Pt(796,648), new Pt(804,644)]}
 	];
 	
-	public var templates:Array<Template>;
+	public var templates:Array<DTemplate>;
+	public var useProtractor:Bool;
+	public var NumPoints:Int;
+	public var SquareSize:Float;
+	public var Origin:Pt;
+	public var Diagonal:Float;
+	public var HalfDiagonal:Float;
+	public var AngleRange:Float;
+	public var AnglePrecision:Float;
 	
 	//
 	// DollarRecognizer class
 	//
-	public function new():Void {
-		//
-		// one predefined template for each unistroke type
-		//
-		this.templates = predefinedTemplate.copy();
+	public function new(?useProtractor:Bool = true):Void {
+		this.templates = [];
+		this.useProtractor = useProtractor;
+		
+		NumPoints = 64;
+		SquareSize = 1000.0;
+		Origin = new Pt(0,0);
+		Diagonal = Math.sqrt(SquareSize * SquareSize + SquareSize * SquareSize);
+		HalfDiagonal = 0.5 * Diagonal;
+		AngleRange = deg2Rad(45.0);
+		AnglePrecision = deg2Rad(2.0);
 	}
 	
 	//
 	// The $1 Gesture Recognizer API begins here -- 3 methods
 	//
-	public function recognize(points:Array<Pt>, useProtractor:Bool):Result {
+	public function recognize(pts:Iterable<Pt>):Array<Result> {
+		var points = Pt.toArray(pts);
 		points = resample(points, NumPoints);
 		var radians = indicativeAngle(points);
 		points = rotateBy(points, -radians);
@@ -124,9 +130,9 @@ class DollarRecognizer {
 		for (i in 0...this.templates.length) // for each unistroke template
 		{
 			var d = if (useProtractor) { // for Protractor
-				optimalCosineDistance(this.templates[i].vector, vector);
+				optimalCosineDistance(this.templates[i].getVector(), vector);
 			} else {// Golden Section Search (original $1)
-				distanceAtBestAngle(points, this.templates[i], -AngleRange, AngleRange, AnglePrecision);
+				distanceAtBestAngle(points, templates[i], -AngleRange, AngleRange, AnglePrecision);
 			}
 			
 			if (d < b) {
@@ -134,11 +140,33 @@ class DollarRecognizer {
 				t = i; // unistroke template
 			}
 		}
-		return new Result(this.templates[t].name, useProtractor ? 1.0 / b : 1.0 - b / HalfDiagonal);
+		return [new Result(this.templates[t], useProtractor ? 1.0 / b : 1.0 - b / HalfDiagonal)];
 	}
 	
-	public function addTemplate(name:String, points:Array<Pt>):Int {
-		return this.templates.push(new Template(name, points));
+	public function addTemplate(id:String, points:Iterable<Pt>):Template {
+		var pts = Pt.toArray(points);
+		pts = DollarRecognizer.resample(pts, NumPoints);
+		var radians = DollarRecognizer.indicativeAngle(pts);
+		pts = DollarRecognizer.rotateBy(pts, -radians);
+		pts = DollarRecognizer.scaleTo(pts, SquareSize);
+		pts = DollarRecognizer.translateTo(pts, Origin);
+		
+		var t = new DTemplate(id, pts);
+		this.templates.push(t);
+		return t;
+	}
+	
+	public function removeTemplate(id:String):Void {
+		for (t in templates) {
+			if (t.id == id) {
+				templates.remove(t);
+				return;
+			}
+		}
+	}
+	
+	public function getTemplates():Iterable<Template> {
+		return templates;
 	}
 	
 	//
@@ -148,18 +176,21 @@ class DollarRecognizer {
 		var I = pathLength(points) / (n - 1); // interval length
 		var D = 0.0;
 		var newpoints = [points[0]];
-		for (i in 1...points.length) {
+		var i = 1;
+		while (i < points.length) {
 			var d = distance(points[i - 1], points[i]);
-			if ((D + d) >= I)
-			{
+			if ((D + d) >= I) {
 				var qx = points[i - 1].x + ((I - D) / d) * (points[i].x - points[i - 1].x);
 				var qy = points[i - 1].y + ((I - D) / d) * (points[i].y - points[i - 1].y);
 				var q = new Pt(qx, qy);
-				newpoints[newpoints.length] = q; // append new point 'q'
+				newpoints.push(q); // append new point 'q'
 				points.insert(i, q); // insert 'q' at position i in points s.t. 'q' will be the next i
 				D = 0.0;
+			} else {
+				D += d;
 			}
-			else D += d;
+			
+			++i;
 		}
 		// somtimes we fall a rounding-error short of adding the last point, so add it if so
 		if (newpoints.length == n - 1)
@@ -181,10 +212,10 @@ class DollarRecognizer {
 		var sin = Math.sin(radians);
 		
 		var newpoints = [];
-		for (i in 0...points.length) {
-			var qx = (points[i].x - c.x) * cos - (points[i].y - c.y) * sin + c.x;
-			var qy = (points[i].x - c.x) * sin + (points[i].y - c.y) * cos + c.y;
-			newpoints[newpoints.length] = new Pt(qx, qy);
+		for (pt in points) {
+			var qx = (pt.x - c.x) * cos - (pt.y - c.y) * sin + c.x;
+			var qy = (pt.x - c.x) * sin + (pt.y - c.y) * cos + c.y;
+			newpoints.push(new Pt(qx, qy));
 		}
 		return newpoints;
 	}
@@ -193,10 +224,10 @@ class DollarRecognizer {
 	static public function scaleTo(points:Array<Pt>, size:Float):Array<Pt> {
 		var B = boundingBox(points);
 		var newpoints = [];
-		for (i in 0...points.length) {
-			var qx = points[i].x * (size / B.width);
-			var qy = points[i].y * (size / B.height);
-			newpoints[newpoints.length] = new Pt(qx, qy);
+		for (pt in points) {
+			var qx = pt.x * (size / B.width);
+			var qy = pt.y * (size / B.height);
+			newpoints.push(new Pt(qx, qy));
 		}
 		return newpoints;
 	}			
@@ -204,10 +235,10 @@ class DollarRecognizer {
 	{
 		var c = centroid(points);
 		var newpoints = [];
-		for (i in 0...points.length) {
-			var qx = points[i].x + pt.x - c.x;
-			var qy = points[i].y + pt.y - c.y;
-			newpoints[newpoints.length] = new Pt(qx, qy);
+		for (p in points) {
+			var qx = p.x + pt.x - c.x;
+			var qy = p.y + pt.y - c.y;
+			newpoints.push(new Pt(qx, qy));
 		}
 		return newpoints;
 	}
@@ -217,8 +248,8 @@ class DollarRecognizer {
 		var sum = 0.0;
 		var vector = [];
 		for (i in 0...points.length) {
-			vector[vector.length] = points[i].x;
-			vector[vector.length] = points[i].y;
+			vector.push(points[i].x);
+			vector.push(points[i].y);
 			sum += points[i].x * points[i].x + points[i].y * points[i].y;
 		}
 		var magnitude = Math.sqrt(sum);
@@ -242,7 +273,7 @@ class DollarRecognizer {
 		return Math.acos(a * Math.cos(angle) + b * Math.sin(angle));
 	}
 	
-	static public function distanceAtBestAngle(points:Array<Pt>, T:Template, a:Float, b:Float, threshold:Float):Float {
+	static public function distanceAtBestAngle(points:Array<Pt>, T:DTemplate, a:Float, b:Float, threshold:Float):Float {
 		var x1 = Phi * a + (1.0 - Phi) * b;
 		var f1 = distanceAtAngle(points, T, x1);
 		var x2 = (1.0 - Phi) * a + Phi * b;
@@ -269,7 +300,7 @@ class DollarRecognizer {
 		return Math.min(f1, f2);
 	}			
 	
-	static public function distanceAtAngle(points:Array<Pt>, T:Template, radians:Float):Float {
+	static public function distanceAtAngle(points:Array<Pt>, T:DTemplate, radians:Float):Float {
 		var newpoints = rotateBy(points, radians);
 		return pathDistance(newpoints, T.points);
 	}
@@ -305,6 +336,9 @@ class DollarRecognizer {
 	}
 	
 	static public function pathDistance(pts1:Array<Pt>, pts2:Array<Pt>):Float {
+		#if debug
+		if (pts1.length != pts2.length) throw "pts1.length:" + pts1.length + " pts2.length:" + pts2.length;
+		#end
 		var d = 0.0;
 		for (i in 0...pts1.length) // assumes pts1.length == pts2.length
 			d += distance(pts1[i], pts2[i]);
@@ -331,32 +365,20 @@ class DollarRecognizer {
 /**
  * Template class: a unistroke template
  */
-private class Template {
-	public var name(default, null):String;
+private class DTemplate {
+	public var id(default, null):String;
 	public var points(default, null):Array<Pt>;
-	public var vector(default, null):Array<Float>;
 	
-	
-	public function new(name:String, points:Array<Pt>):Void {
-		this.name = name;
-		this.points = DollarRecognizer.resample(points, DollarRecognizer.NumPoints);
-		var radians = DollarRecognizer.indicativeAngle(this.points);
-		this.points = DollarRecognizer.rotateBy(this.points, -radians);
-		this.points = DollarRecognizer.scaleTo(this.points, DollarRecognizer.SquareSize);
-		this.points = DollarRecognizer.translateTo(this.points, DollarRecognizer.Origin);
-		this.vector = DollarRecognizer.vectorize(this.points); // for Protractor
+	public function getVector():Array<Float> {
+		return vector != null ? vector : vector = DollarRecognizer.vectorize(this.points);
 	}
-}
-
-/**
- * Result class
- */
-private class Result {
-	public var name(default, null):String;
-	public var score(default, null):Float;
 	
-	public function new(name:String, score:Float):Void {
-		this.name = name;
-		this.score = score;
+	var vector:Array<Float>;
+	
+	
+	public function new(id:String, points:Iterable<Pt>):Void {
+		this.id = id;
+		this.points = Pt.toArray(points);
+		this.vector = null;
 	}
 }

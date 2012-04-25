@@ -11,17 +11,17 @@ using Std;
 using Lambda;
 
 class GestureRecognizer extends Sprite {
-	static function generateTwoProgressiveRandomTemplates():List<Template> {
+	static function generateTwoProgressiveRandomTemplates():Array<Template> {
 		var templates = new Array<Template>();
 		for (i in 1...9) {
 			if (i < 3) {
 				templates.push(generateRandomTemplate(null, "Random " + i, 2));
 			}
 			else {
-				templates.push(generateRandomTemplate(templates[i - 3].pts, "Random " + i, 1));
+				templates.push(generateRandomTemplate(cast templates[i - 3].points, "Random " + i, 1));
 			}
 		}
-		return templates.list();
+		return templates;
 	}
 	
 	static function generateRandomTemplate(base:List<Pt>, id:String, maxPoints:Int):Template {
@@ -31,15 +31,20 @@ class GestureRecognizer extends Sprite {
 				points.add(new Pt(pt.x, pt.y));
 			}
 		}
+		
 		for (i in 0...maxPoints) {
-			points.add(new Pt(Math.random() * 800.0, Math.random() * 800.0));
+			points.add(new Pt(Math.random() * 1000.0, Math.random() * 1000.0));
 		}
-		return new Template(id, points);
+		
+		return {
+			id: id,
+			points:points
+		}
 	}
 	
-	var templates:List<Template>;
+	var templates:Iterable<Template>;
 	var templateSps:Array<PointsSp>;
-	var recognizer:ContinuousGestureRecognizer;
+	var recognizer:Recognizer;
 	var mousePressed:Bool;
 	var inputSp:PointsSp;
 	
@@ -57,25 +62,26 @@ class GestureRecognizer extends Sprite {
 		removeEventListener(Event.ADDED_TO_STAGE, init);
 		
 		mousePressed = false;
-		templates = generateTwoProgressiveRandomTemplates();
 		
+		templates = DollarRecognizer.predefinedTemplate.slice(0,8);
 		
 		inputSp = new PointsSp(new List<Pt>(), 0x000000, 0xCCCCCC);
 		addChild(inputSp);
 		inputSp.redraw();
 		
+		recognizer = new DollarRecognizer(false);// new ContinuousGestureRecognizer(5);
+		
 		templateSps = [];
 		var i = 0;
-		var offset = stage.stageWidth / templates.length;
+		var offset = stage.stageWidth / templates.count();
 		for (t in templates) {
-			var tSp = new PointsSp(t.pts.map(function(p) return new Pt(p.x, p.y)), 0x000000, 0xFFFFFF, 0.1);
+			recognizer.addTemplate(t.id, t.points);
+			var tSp = new PointsSp(t.points.map(function(p) return new Pt(p.x, p.y)), 0x000000, 0xFFFFFF, 0.1);
 			tSp.templateId = t.id;
 			tSp.x = i++ * offset;
 			templateSps.push(tSp);
 			addChild(tSp);
 		}
-		
-		recognizer = new ContinuousGestureRecognizer(templates, 5);
 		
 		inputSp.addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
 		inputSp.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
@@ -140,7 +146,7 @@ class PointsSp extends Sprite {
 		graphics.clear();
 		
 		graphics.beginFill(bgColor);
-		graphics.drawRect(0, 0, 800 * scalePoints, 800 * scalePoints);
+		graphics.drawRect(0, 0, 1000 * scalePoints, 1000 * scalePoints);
 		graphics.endFill();
 		
 		if (!pts.empty()) {

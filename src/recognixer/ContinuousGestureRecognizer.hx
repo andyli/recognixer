@@ -1,3 +1,7 @@
+package recognixer;
+
+using Lambda;
+
 /*
  * Ported to Haxe by Andy Li
  * Based on...
@@ -30,11 +34,8 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- */
-
-package recognixer;
-
-/**
+ *
+ *
  * A continuous gesture recognizer. Outputs a probability distribution over
  * a set of template gestures as a function of received sampling points.
  * 
@@ -59,8 +60,14 @@ package recognixer;
  * @author Leif Denby
  *
  */
-class ContinuousGestureRecognizer 
+class ContinuousGestureRecognizer implements Recognizer
 {	
+	public var templates(default, null):Array<CTemplate>;
+	public var beta:Float;
+	public var lambda:Float;
+	public var kappa:Float;
+	public var e_sigma:Float;
+	
 	/**
 	 * Creates an instance of a continuous gesture recognizer.
 	 *
@@ -68,32 +75,15 @@ class ContinuousGestureRecognizer
 	 * @param samplePointDistance the distance between sampling points in the normalized space
 	 * (1000 x 1000 units)
 	 */
-	public function new(templates:List<Template>, samplePointDistance:Int = 5):Void {
-		patterns = new List<Pattern>();
+	public function new(?samplePointDistance:Int = 5):Void {
+		patterns = new Array<Pattern>();
+		templates = new Array<CTemplate>();
 		this.samplePointDistance = samplePointDistance;
-		setTemplateSet(templates);
-	}
-	
-	/**
-	 * Sets the set of templates this recognizer will recognize.
-	 * 
-	 * @param templates the set of templates this recognizer will recognize
-	 */
-	public function setTemplateSet(templates:List<Template>):Void {
-		patterns.clear();
-		for (t in templates) {
-			normalize(t.pts);
-			patterns.add(new Pattern(t, generateEquiDistantProgressiveSubSequences(t.pts, 200)));
-		}
-		for (pattern in patterns) {
-			var segments:List<List<Pt>> = new List<List<Pt>>();
-			for (pts in pattern.segments) {
-				var newPts:List<Pt> = deepCopyPts(pts);
-				normalize(newPts);
-				segments.add(resamplePoints(newPts, getResamplingPointCount(newPts, samplePointDistance)));
-			}
-			pattern.segments = segments;
-		}
+		
+		beta = DEFAULT_BETA;
+		lambda = DEFAULT_LAMBDA;
+		kappa = DEFAULT_KAPPA;
+		e_sigma = DEFAULT_E_SIGMA;
 	}
 
 	/**
@@ -106,14 +96,49 @@ class ContinuousGestureRecognizer
 	 * @param e_sigma a parameter, see the paper for details
 	 * @return a list of templates and their associated probabilities
 	 */
-	public function recognize(input:List<Pt>, beta:Float = DEFAULT_BETA, lambda:Float = DEFAULT_LAMBDA, kappa:Float = DEFAULT_KAPPA, e_sigma:Float = DEFAULT_E_SIGMA):Array<Result> {
-		if (input.length < 2) {
+	public function recognize(input:Iterable<Pt>):Array<Result> {
+		#if debug
+		if (input.count() < 2) {
 			throw "input must consist of at least two points";
 		}
+		#end
 		var incResults:List<IncrementalResult> = getIncrementalResults(input, beta, lambda, kappa, e_sigma);
 		var results:Array<Result> = getResults(incResults);
 		results.sort(Result.compare);	
 		return results;
+	}
+	
+	public function addTemplate(id:String, points:Iterable<Pt>):Template {
+		var t = new CTemplate(id, points);
+		templates.push(t);
+		
+		normalize(t.points);
+		var pattern = new Pattern(t, generateEquiDistantProgressiveSubSequences(t.points, 200));
+		patterns.push(pattern);
+		
+		var segments = new List<List<Pt>>();
+		for (pts in pattern.segments) {
+			var newPts:List<Pt> = deepCopyPts(pts);
+			normalize(newPts);
+			segments.add(resamplePoints(newPts, getResamplingPointCount(newPts, samplePointDistance)));
+		}
+		pattern.segments = segments;
+		
+		return t;
+	}
+	
+	public function removeTemplate(id:String):Void {		
+		for (p in patterns) {
+			if (p.template.id == id) {
+				templates.remove(p.template);
+				patterns.remove(p);
+				return;
+			}
+		}
+	}
+	
+	public function getTemplates():Iterable<Template> {
+		return templates;
 	}
 	
 	/**
@@ -146,17 +171,17 @@ class ContinuousGestureRecognizer
 	private inline static var MAX_RESAMPLING_PTS:Int = 1000;
 	private static var normalizedSpace:Rect = new Rect(0, 0, 1000, 1000);
 	private var samplePointDistance:Int;
-	private var patterns:List<Pattern>;
+	private var patterns:Array<Pattern>;
 	
 	private function getResults(incrementalResults:List<IncrementalResult>):Array<Result> {
 		var results:Array<Result> = new Array<Result>();
 		for (ir in incrementalResults) {
-			results.push(new Result(ir.pattern.template, ir.prob, ir.mostLikelySegment));
+			results.push(new CResult(ir.pattern.template, ir.prob, ir.mostLikelySegment));
 		}
 		return results;
 	}
 	
-	private function getIncrementalResults(input:List<Pt>, beta:Float, lambda:Float, kappa:Float, e_sigma:Float):List<IncrementalResult> {
+	private function getIncrementalResults(input:Iterable<Pt>, beta:Float, lambda:Float, kappa:Float, e_sigma:Float):List<IncrementalResult> {
 		var results:List<IncrementalResult> = new List<IncrementalResult>();
 		var unkPts:List<Pt> = deepCopyPts(input);
 		normalize(unkPts);
@@ -409,7 +434,7 @@ class ContinuousGestureRecognizer
 	
 	private static function resamplePoints(points:List<Pt>, numTargetPoints:Int):List<Pt> {
 		var r:List<Pt> = new List<Pt>();
-		var inArray:Array<Float> = toArray(points);
+		var inArray:Array<Float> = Pt.toArrayFloat(points);
 		var outArray:Array<Float> = []; //TODO new int[numTargetPoints * 2];
 		
 		resample(inArray, outArray, points.length, numTargetPoints);
@@ -420,17 +445,6 @@ class ContinuousGestureRecognizer
 			i += 2;
 		}
 		return r;
-	}
-
-	private static function toArray(points:List<Pt>):Array<Float> {
-		var out:Array<Float> = [];
-			
-		for (pt in points) {
-			out.push(pt.x);
-			out.push(pt.y);
-		}
-		
-		return out;
 	}
 	
 	private static function resample(template:Array<Float>, buffer:Array<Float>, n:Int, numTargetPoints:Int):Void {
@@ -576,17 +590,18 @@ class ContinuousGestureRecognizer
  * @author Per Ola Kristensson
  *
  */
-class Template {
+class CTemplate {
 	
 	/**
 	 * The identifier for this template gesture / stroke.
 	 */
 	public var id(default, null):String;
+	
 	/**
 	 * A sequence of points that defines this template
 	 * gesture / stroke.
 	 */
-	public var pts(default, null):List<Pt>;
+	public var points(default, null):List<Pt>;
 	
 	/**
 	 * Creates a template gesture / stroke.
@@ -597,54 +612,15 @@ class Template {
 	 */
 	public function new(id:String, points:Iterable<Pt>):Void {
 		this.id = id;
-		this.pts = ContinuousGestureRecognizer.deepCopyPts(points);
+		this.points = ContinuousGestureRecognizer.deepCopyPts(points);
 	}
 
-}
-
-
-/**
- * Holds a recognition result.
- * 
- * @author Per Ola Kristensson
- *
- */
-class Result {
-	
-	/**
-	 * The template associated with this recognition result.
-	 */
-	public var template(default, null):Template;
-	/**
-	 * The probability associated with this recognition result.
-	 */
-	public var prob(default, null):Float;
-	/**
-	 * The point sequence associated with this recognition result.
-	 */
-	public var pts(default, null):List<Pt>;
-
-	public function new(template:Template, prob:Float, pts:List<Pt>):Void {
-		this.template = template;
-		this.prob = prob;
-		this.pts = pts;
-	}
-	
-	static public function compare(r0:Result, r1:Result):Int {
-		return if (r0.prob == r1.prob) {
-			0;
-		} else if (r0.prob < r1.prob) {
-			1;
-		} else {
-			-1;
-		}
-	}
 }
 
 private class Pattern {
-	public var template:Template;
+	public var template:CTemplate;
 	public var segments:List<List<Pt>>;
-	public function new(template:Template, segments:List<List<Pt>>):Void {
+	public function new(template:CTemplate, segments:List<List<Pt>>):Void {
 		this.template = template;
 		this.segments = segments;
 	}
@@ -658,5 +634,17 @@ private class IncrementalResult {
 		this.pattern = pattern;
 		this.prob = prob;
 		this.mostLikelySegment = mostLikelySegment;
+	}
+}
+
+class CResult extends Result {
+	/**
+	 * The point sequence associated with this recognition result.
+	 */
+	public var points(default, null):Iterable<Pt>;
+
+	public function new(template:Template, prob:Float, points:Iterable<Pt>):Void {
+		super(template, prob);
+		this.points = points;
 	}
 }
