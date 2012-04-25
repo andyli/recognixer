@@ -250,9 +250,10 @@ class DollarRecognizer implements Recognizer {
 			vector.push(points[i].y);
 			sum += points[i].x * points[i].x + points[i].y * points[i].y;
 		}
-		var magnitude = Math.sqrt(sum);
+		var magnitude = 1/Math.sqrt(sum);
 		for (i in 0...vector.length)
-			vector[i] /= magnitude;
+			vector[i] *= magnitude;
+		
 		return vector;
 	}
 	
