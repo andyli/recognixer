@@ -79,14 +79,15 @@
     <Compile Include="bin\index.html" />
     <Compile Include="src\recognixer\ContinuousGestureRecognizer.hx" />
     <Compile Include="src\recognixer\DollarRecognizer.hx" />
-    <Compile Include="src\recognixer\GestureRecognizer.hx" />
     <Compile Include="src\recognixer\Pt.hx" />
     <Compile Include="src\recognixer\Rect.hx" />
     <Compile Include="src\recognixer\Template.hx" />
     <Compile Include="src\recognixer\Recognizer.hx" />
     <Compile Include="src\recognixer\Result.hx" />
+    <Compile Include="demo\GestureRecognizer.hx" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="src\recognixer\" />
+    <Folder Include="demo\" />
   </ItemGroup>
 </Project>

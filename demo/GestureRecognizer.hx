@@ -1,11 +1,15 @@
-package recognixer;
+package;
 
 import nme.Lib;
 import nme.display.Sprite;
 import nme.events.Event;
 import nme.events.MouseEvent;
+
+import recognixer.Recognizer;
 import recognixer.ContinuousGestureRecognizer;
 import recognixer.DollarRecognizer;
+import recognixer.Template;
+import recognixer.Pt;
 
 using Std;
 using Lambda;
@@ -65,7 +69,7 @@ class GestureRecognizer extends Sprite {
 		
 		templates = DollarRecognizer.predefinedTemplate.slice(0,8);
 		
-		inputSp = new PointsSp(new List<Pt>(), 0x000000, 0xCCCCCC);
+		inputSp = new PointsSp(new List<Pt>(), 0x000000, 0xCCCCCC, 800);
 		addChild(inputSp);
 		inputSp.redraw();
 		
@@ -76,7 +80,7 @@ class GestureRecognizer extends Sprite {
 		var offset = stage.stageWidth / templates.count();
 		for (t in templates) {
 			recognizer.addTemplate(t.id, t.points);
-			var tSp = new PointsSp(t.points.map(function(p) return new Pt(p.x, p.y)), 0x000000, 0xFFFFFF, 0.1);
+			var tSp = new PointsSp(t.points.map(function(p) return new Pt(p.x, p.y)), 0x000000, 0xFFFFFF, offset);
 			tSp.templateId = t.id;
 			tSp.x = i++ * offset;
 			templateSps.push(tSp);
@@ -91,7 +95,7 @@ class GestureRecognizer extends Sprite {
 	function onMousePressed(evt:MouseEvent):Void {
 		mousePressed = true;
 		inputSp.pts.clear();
-		inputSp.pts.add(new Pt(evt.localX, evt.localY));
+		inputSp.pts.add(new Pt(evt.localX / (inputSp.size / 1000), evt.localY / (inputSp.size / 1000)));
 	}
 	
 	function onMouseReleased(evt:MouseEvent):Void {
@@ -100,7 +104,7 @@ class GestureRecognizer extends Sprite {
 	
 	function onMouseMoved(evt:MouseEvent):Void {
 		if (mousePressed) {
-			inputSp.pts.add(new Pt(evt.localX, evt.localY));
+			inputSp.pts.add(new Pt(evt.localX / (inputSp.size / 1000), evt.localY / (inputSp.size / 1000)));
 			inputSp.redraw();
 			
 			var results = recognizer.recognize(inputSp.pts);
@@ -127,17 +131,17 @@ class PointsSp extends Sprite {
 	public var pts:List<Pt>;
 	public var color:Int;
 	public var bgColor:Int;
-	public var scalePoints:Float;
+	public var size:Float;
 	public var templateId:String;
 	
-	public function new(pts:List<Pt>, color:Int = 0x000000, bgColor:Int = 0xFFFFFF, scalePoints:Float = 1):Void {
+	public function new(pts:List<Pt>, color:Int = 0x000000, bgColor:Int = 0xFFFFFF, size:Float = 1000):Void {
 		super();
 		
 		this.templateId = "";
 		this.pts = pts;
 		this.color = color;
 		this.bgColor = bgColor;
-		this.scalePoints = scalePoints;
+		this.size = size;
 		
 		redraw();
 	}
@@ -146,16 +150,16 @@ class PointsSp extends Sprite {
 		graphics.clear();
 		
 		graphics.beginFill(bgColor);
-		graphics.drawRect(0, 0, 1000 * scalePoints, 1000 * scalePoints);
+		graphics.drawRect(0, 0, size, size);
 		graphics.endFill();
 		
 		if (!pts.empty()) {
 			graphics.lineStyle(1, color);
 			var fpt = pts.first();
-			graphics.drawCircle(fpt.x * scalePoints, fpt.y * scalePoints, 2);
-			graphics.moveTo(fpt.x * scalePoints, fpt.y * scalePoints);
+			graphics.drawCircle(fpt.x * 0.001 * size, fpt.y * 0.001 * size, 2);
+			graphics.moveTo(fpt.x * 0.001 * size, fpt.y * 0.001 * size);
 			for (pt in pts) {
-				graphics.lineTo(pt.x * scalePoints, pt.y * scalePoints);
+				graphics.lineTo(pt.x * 0.001 * size, pt.y * 0.001 * size);
 			}
 			graphics.moveTo(0, 0);
 		}

@@ -1,7 +1,5 @@
 package recognixer;
 
-using Lambda;
-
 /*
  * Ported to Haxe by Andy Li
  * Based on...

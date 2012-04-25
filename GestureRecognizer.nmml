@@ -2,12 +2,13 @@
 <project>
 	
 	<meta title="GestureRecognizer" package="com.testing.myapplication" version="1.0.0" company="" />
-	<app main="recognixer.GestureRecognizer" file="GestureRecognizer" path="bin" />
+	<app main="GestureRecognizer" file="GestureRecognizer" path="bin" />
 	
 	<window width="800" height="800" unless="mobile" />
 	<window fps="30" />
 
 	<source path="src" />
+	<source path="demo" />
 	
 	<haxelib name="nme" />
 	
