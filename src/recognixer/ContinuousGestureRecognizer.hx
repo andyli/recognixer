@@ -166,7 +166,6 @@ class ContinuousGestureRecognizer implements Recognizer
 	private inline static var DEFAULT_BETA:Float = 400.0;
 	private inline static var DEFAULT_LAMBDA:Float = 0.4;
 	private inline static var DEFAULT_KAPPA:Float = 1.0;
-	private inline static var MAX_RESAMPLING_PTS:Int = 1000;
 	private static var normalizedSpace:Rect = new Rect(0, 0, 1000, 1000);
 	private var samplePointDistance:Int;
 	private var patterns:Array<Pattern>;
@@ -446,7 +445,7 @@ class ContinuousGestureRecognizer implements Recognizer
 	}
 	
 	private static function resample(template:Array<Float>, buffer:Array<Float>, n:Int, numTargetPoints:Int):Void {
-		var segment_buf:Array<Float> = []; //TODO new int[MAX_RESAMPLING_PTS];
+		var segment_buf:Array<Float> = [];
 
 		var l:Float, segmentLen:Float, horizRest:Float, verticRest:Float, dx:Float, dy:Float;
 		var x1:Float, y1:Float, x2:Float, y2:Float;
